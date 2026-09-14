@@ -7,6 +7,8 @@ export function GetSaveDirectory():Promise<string>;
 
 export function OpenSaveDirectory():Promise<void>;
 
+export function SelectDirectory():Promise<string>;
+
 export function SelectFile():Promise<Array<string>>;
 
 export function SelectSaveDirectory():Promise<string>;

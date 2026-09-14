@@ -1,0 +1,151 @@
+/* 全局变量与容器 */
+.container {
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+}
+
+/* 顶部 Tab 样式 */
+.tab-header {
+    display: flex;
+    background-color: #f1f5f9;
+    padding: 4px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 选择框样式 */
+.drop-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    color: #64748b;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.drop-zone:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.file-name {
+    color: #0f172a;
+    font-weight: bold;
+    word-break: break-all;
+}
+
+/* 二维码与通用按钮样式 */
+.qr-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 16px;
+}
+
+.url-text {
+    font-size: 0.85rem;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin: 12px 0;
+    word-break: break-all;
+}
+
+.action-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.action-btn.secondary {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.btn-group {
+    display: flex;
+    gap: 8px;
+}
+
+.small-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* 底部状态栏样式 */
+.status-bar {
+    margin-top: 16px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: #f0fdf4;
+    color: #166534;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.status-bar.error {
+    background-color: #fef2f2;
+    color: #991b1b;
+}
+
+
+/* 两项并排的外层容器 */
+.select-group {
+    display: flex;
+    align-items: center;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+/* 内部选择块：等分宽度，移除原有独立边框 */
+.select-group .drop-zone {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0;
+    background: transparent;
+    padding: 20px 12px;
+}
+
+.select-group .drop-zone:hover {
+    background: #eff6ff;
+}
+
+/* 中间垂直分割线 */
+.divider {
+    width: 1px;
+    height: 40px;
+    background-color: #cbd5e1;
+}

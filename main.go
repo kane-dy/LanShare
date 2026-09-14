@@ -21,7 +21,7 @@ func main() {
 	err := wails.Run(&options.App{
 		Title:     "LanShare", // 软件窗口标题
 		Width:     480,        // 窗口默认宽度
-		Height:    580,        // 窗口默认高度
+		Height:    600,        // 窗口默认高度
 		MinWidth:  400,        // 允许调节的最小宽度
 		MinHeight: 500,        // 允许调节的最小高度
 		// 【核心】禁用窗口缩放

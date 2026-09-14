@@ -94,19 +94,14 @@ func (a *App) SelectFile() ([]string, error) {
 	return filePaths, nil
 }
 
-//// SelectFile 唤起系统原生文件选择弹窗，返回选中的文件绝对路径
-//func (a *App) SelectFile() (string, error) {
-//	filePath, err := wailsRuntime.OpenFileDialog(a.ctx, wailsRuntime.OpenDialogOptions{
-//		Title: "选择要发送的文件",
-//		Filters: []wailsRuntime.FileFilter{
-//			{
-//				DisplayName: "所有文件 (*.*)",
-//				Pattern:     "*.*",
-//			},
-//		},
-//	})
-//	if err != nil {
-//		return "", err
-//	}
-//	return filePath, nil
-//}
+// SelectDirectory 唤起系统原生文件夹选择弹窗，返回选中的文件夹绝对路径
+func (a *App) SelectDirectory() (string, error) {
+	dirPath, err := wailsRuntime.OpenDirectoryDialog(a.ctx, wailsRuntime.OpenDialogOptions{
+		Title: "选择要发送的文件夹",
+	})
+	if err != nil {
+		return "", err
+	}
+	// 用户如果点了取消，dirPath 会是空字符串 ""
+	return dirPath, nil
+}
