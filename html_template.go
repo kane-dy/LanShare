@@ -100,7 +100,7 @@ func getUploadHTML() string {
       status.innerText = '正在上传中...';
 
       try {
-        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
         if (res.ok) {
           status.style.color = '#16a34a';
           status.innerText = '🎉 上传成功！';
@@ -132,23 +132,24 @@ func getUploadHTML() string {
 func getShareHubHTML(items []SharedItem) string {
 	rows := ""
 	for _, item := range items {
-		// 格式化文件大小
 		sizeMB := float64(item.FileSize) / 1024 / 1024
 		sizeStr := fmt.Sprintf("%.2f MB", sizeMB)
 		if item.FileSize < 1024*1024 {
 			sizeStr = fmt.Sprintf("%.2f KB", float64(item.FileSize)/1024)
 		}
 
-		// 🌟 修改点：将文件名挂载到路径后（如 /download/shared/文档.docx?path=...）
-		// 浏览器识别到真实文件后缀后，会直接触发下载而非在线预览
 		downloadUrl := fmt.Sprintf("/download/shared/%s?path=%s", url.PathEscape(item.FileName), url.QueryEscape(item.FilePath))
 
+		// 🌟 1. 在操作列增加“删除”按钮，通过 onclick 触发 deleteFile 函数
 		rows += fmt.Sprintf(`
        <tr>
           <td class="file-name">%s</td>
           <td class="file-size">%s</td>
-          <td><a href="%s" class="dl-btn" download="%s">下载</a></td>
-       </tr>`, item.FileName, sizeStr, downloadUrl, item.FileName)
+          <td>
+             <a href="%s" class="dl-btn" download="%s">下载</a>
+             <button onclick="deleteFile('%s')" class="del-btn">删除</button>
+          </td>
+       </tr>`, item.FileName, sizeStr, downloadUrl, item.FileName, url.QueryEscape(item.FilePath))
 	}
 
 	if len(items) == 0 {
@@ -172,6 +173,9 @@ func getShareHubHTML(items []SharedItem) string {
     .file-size { color: #64748b; font-size: 0.85rem; white-space: nowrap; }
     .dl-btn { display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; }
     .dl-btn:active { background: #1d4ed8; }
+    /* 🌟 2. 删除按钮样式 */
+    .del-btn { border: none; background: #ef4444; color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; margin-left: 6px; }
+    .del-btn:active { background: #dc2626; }
   </style>
 </head>
 <body>
@@ -190,6 +194,23 @@ func getShareHubHTML(items []SharedItem) string {
       </tbody>
     </table>
   </div>
+
+  <!-- 🌟 3. 删除逻辑的 JS 交互脚本 -->
+  <script>
+    async function deleteFile(encodedPath) {
+      if (!confirm('确定要从共享库中移除此文件吗？')) return;
+      try {
+        const resp = await fetch('/api/delete?path=' + encodedPath, { method: 'POST' });
+        if (resp.ok) {
+          location.reload();
+        } else {
+          alert('删除失败：' + await resp.text());
+        }
+      } catch (e) {
+        alert('网络请求异常');
+      }
+    }
+  </script>
 </body>
 </html>`, rows)
 }

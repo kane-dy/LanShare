@@ -1,12 +1,9 @@
 <template>
   <div class="content-box">
-    <div v-if="!receiveUrl" class="start-receive-box">
-      <p>开启接收服务后，局域网内的其他设备（手机/电脑）扫描二维码或在浏览器打开链接即可上传文件。</p>
-      <button class="action-btn primary" @click="startReceive">开启接收服务</button>
-    </div>
-
-    <div v-else class="qr-container">
-      <qrcode-vue :value="receiveUrl" :size="160" level="H" />
+    <!-- 直接展示二维码与操作按钮（移除了“开启接收服务”按钮和包裹层） -->
+    <div class="qr-container">
+      <p class="desc-text">局域网内的其他设备（手机/电脑）扫描二维码或在浏览器打开链接即可上传文件。</p>
+      <qrcode-vue v-if="receiveUrl" :value="receiveUrl" :size="160" level="H" />
       <p class="url-text">{{ receiveUrl }}</p>
       <div class="btn-group">
         <button class="action-btn" @click="copyLink">复制链接</button>
@@ -29,7 +26,7 @@
 import { ref, onMounted } from 'vue';
 import QrcodeVue from 'qrcode.vue';
 import {
-  StartReceiveMode,
+  GetReceiveUrl,
   OpenSaveDirectory,
   GetSaveDirectory,
   SelectSaveDirectory
@@ -39,17 +36,21 @@ const emit = defineEmits(['update-status']);
 
 const receiveUrl = ref('');
 const savePath = ref('');
-const defaultPort = 8080;
 
 const showStatus = (msg, isError = false) => {
   emit('update-status', { msg, isError });
 };
 
+// 🌟 组件挂载时自动获取路径并拉取接收二维码 URL
 onMounted(async () => {
   try {
     savePath.value = await GetSaveDirectory();
+    // 直接获取后台已自动开启服务的接收 URL
+    receiveUrl.value = await GetReceiveUrl();
+    showStatus('接收服务已就绪', false);
   } catch (err) {
-    console.error('获取保存目录失败:', err);
+    console.error('初始化失败:', err);
+    showStatus('获取接收链接失败: ' + err, true);
   }
 });
 
@@ -63,18 +64,6 @@ const changeDirectory = async () => {
     }
   } catch (err) {
     showStatus('修改保存目录失败: ' + err, true);
-  }
-};
-
-// 开启接收服务
-const startReceive = async () => {
-  showStatus('正在开启接收服务...', false);
-  try {
-    const url = await StartReceiveMode(defaultPort);
-    receiveUrl.value = url;
-    showStatus('接收服务已开启', false);
-  } catch (err) {
-    showStatus('启动失败: ' + err, true);
   }
 };
 
@@ -97,11 +86,31 @@ const openFolder = async () => {
 </script>
 
 <style scoped>
-.start-receive-box {
+.desc-text {
   text-align: center;
-  padding: 20px 0;
   color: #64748b;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.url-text {
+  margin: 12px 0;
+  color: #3b82f6;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
 }
 
 .settings-box {

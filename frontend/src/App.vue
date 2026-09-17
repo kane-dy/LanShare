@@ -41,7 +41,7 @@ import { ref } from 'vue';
 import SendMode from './components/SendMode.vue';
 import ReceiveMode from './components/ReceiveMode.vue';
 import ShareHubMode from './components/ShareHubMode.vue'; // 🌟 引入新组件
-import { StopServer } from '../wailsjs/go/main/App';
+// import { StopServer } from '../wailsjs/go/main/App';
 
 const activeMode = ref('send');
 const statusMsg = ref('');
@@ -53,17 +53,12 @@ const handleStatusUpdate = ({ msg, isError: errStatus }) => {
 };
 
 // 切换模式时清理原有的服务与状态
-const switchMode = async (mode) => {
+const switchMode = (mode) => {
   if (activeMode.value === mode) return;
   activeMode.value = mode;
   statusMsg.value = '';
-
-  try {
-    await StopServer();
-  } catch (err) {
-    handleStatusUpdate({ msg: '停止服务失败: ' + err, isError: true });
-  }
 };
+
 </script>
 
 <style>
