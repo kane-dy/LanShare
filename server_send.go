@@ -23,7 +23,6 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 		return "", fmt.Errorf("未选择任何文件")
 	}
 
-	// 1. 判断是单文件还是多文件
 	var downloadFileName string
 	var isSingleFile bool = false
 	var singleFilePath string
@@ -33,7 +32,6 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("文件不存在: %v", err)
 		}
-		// 如果选中的是单个普通文件（不是文件夹）
 		if !info.IsDir() {
 			isSingleFile = true
 			singleFilePath = filePaths[0]
@@ -41,37 +39,30 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 		}
 	}
 
-	// 如果是多个文件或包含文件夹，统一打包命名为 "LanShare_传输文件.zip"
 	if !isSingleFile {
 		downloadFileName = fmt.Sprintf("LanShare_传输文件_%s.zip", time.Now().Format("150405"))
 	}
 
 	mux := http.NewServeMux()
 
-	// 2. 构造干净的下载路由（例如 /download/file.zip 或 /download/file.docx）
 	ext := filepath.Ext(downloadFileName)
 	if ext == "" && !isSingleFile {
 		ext = ".zip"
 	}
 	cleanRoute := fmt.Sprintf("/download/file%s", ext)
 
-	// 3. 注册下载处理路由
+	// 注册临时传输下载路由
 	mux.HandleFunc("/download/", func(w http.ResponseWriter, r *http.Request) {
-		// 防缓存标头
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
-
-		// 强制字节流下载，禁止浏览器在线预览
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 
-		// 设 Content-Disposition 标头（正确处理中文文件名）
 		encodedFileName := url.QueryEscape(downloadFileName)
 		contentDisposition := fmt.Sprintf("attachment; filename=\"%s\"; filename*=UTF-8''%s", encodedFileName, encodedFileName)
 		w.Header().Set("Content-Disposition", contentDisposition)
 
-		// 情况 1：如果是单个文件，直接高效流式读取发送
 		if isSingleFile {
 			file, err := os.Open(singleFilePath)
 			if err != nil {
@@ -81,14 +72,16 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 			defer file.Close()
 
 			fi, err := file.Stat()
-			if err == nil {
-				w.Header().Set("Content-Length", fmt.Sprintf("%d", fi.Size()))
-				http.ServeContent(w, r, downloadFileName, fi.ModTime(), file)
+			if err != nil {
+				http.Error(w, "获取文件状态失败", http.StatusInternalServerError)
+				return
 			}
+
+			w.Header().Set("Accept-Ranges", "bytes")
+			http.ServeContent(w, r, downloadFileName, fi.ModTime(), file)
 			return
 		}
 
-		// 情况 2：多文件/文件夹，实时流式 Zip 打包输出
 		zw := zip.NewWriter(w)
 		defer zw.Close()
 
@@ -99,7 +92,6 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 			}
 
 			if info.IsDir() {
-				// 递归打包文件夹
 				baseDir := filepath.Dir(path)
 				_ = filepath.Walk(path, func(filePath string, fi os.FileInfo, err error) error {
 					if err != nil {
@@ -109,7 +101,6 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 					if err != nil {
 						return err
 					}
-					// 统一 Zip 内的分隔符为 "/"
 					relPath = filepath.ToSlash(relPath)
 
 					if fi.IsDir() {
@@ -123,10 +114,37 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 					return zipFileToArchive(zw, filePath, relPath)
 				})
 			} else {
-				// 打包单个文件
 				_ = zipFileToArchive(zw, path, info.Name())
 			}
 		}
+	})
+
+	// 注册分享库全局下载路由
+	mux.HandleFunc("/download/shared", func(w http.ResponseWriter, r *http.Request) {
+		filePath := r.URL.Query().Get("path")
+		if filePath == "" {
+			http.Error(w, "未指定文件路径", http.StatusBadRequest)
+			return
+		}
+
+		file, err := os.Open(filePath)
+		if err != nil {
+			http.Error(w, "文件不存在或已被删除", http.StatusNotFound)
+			return
+		}
+		defer file.Close()
+
+		fi, err := file.Stat()
+		if err != nil {
+			http.Error(w, "无法获取文件信息", http.StatusInternalServerError)
+			return
+		}
+
+		encodedFileName := url.QueryEscape(fi.Name())
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"; filename*=UTF-8''%s", encodedFileName, encodedFileName))
+		w.Header().Set("Accept-Ranges", "bytes")
+
+		http.ServeContent(w, r, fi.Name(), fi.ModTime(), file)
 	})
 
 	a.server = &http.Server{
@@ -149,7 +167,6 @@ func (a *App) StartSendMode(filePaths []string, port int) (string, error) {
 	return fmt.Sprintf("http://%s:%d%s?t=%d", localIP, port, cleanRoute, time.Now().UnixNano()), nil
 }
 
-// 辅助函数：将单个文件追加到 zip.Writer 中
 func zipFileToArchive(zw *zip.Writer, srcPath, zipPath string) error {
 	file, err := os.Open(srcPath)
 	if err != nil {
@@ -164,4 +181,85 @@ func zipFileToArchive(zw *zip.Writer, srcPath, zipPath string) error {
 
 	_, err = io.Copy(w, file)
 	return err
+}
+
+// StartShareHubMode 启动全局分享库模式（扫码后进入文件表格列表）
+// StartShareHubMode 启动全局分享库模式（扫码后进入文件表格列表）
+func (a *App) StartShareHubMode(port int) (string, error) {
+	_ = a.StopServer()
+
+	a.serverLock.Lock()
+	defer a.serverLock.Unlock()
+
+	mux := http.NewServeMux()
+
+	// 1. 根路径 GET / : 响应包含文件表格的 H5 网页
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// 动态获取当前的共享文件列表并渲染页面
+		items := a.GetSharedFiles()
+		w.Write([]byte(getShareHubHTML(items)))
+	})
+
+	// 2. 单文件强制下载接口（对标 StartSendMode，将文件名挂载在 URL 路径上）
+	mux.HandleFunc("/download/shared/", func(w http.ResponseWriter, r *http.Request) {
+		filePath := r.URL.Query().Get("path")
+		if filePath == "" {
+			http.Error(w, "未指定文件路径", http.StatusBadRequest)
+			return
+		}
+
+		file, err := os.Open(filePath)
+		if err != nil {
+			http.Error(w, "文件不存在或已被删除", http.StatusNotFound)
+			return
+		}
+		defer file.Close()
+
+		fi, err := file.Stat()
+		if err != nil {
+			http.Error(w, "无法获取文件信息", http.StatusInternalServerError)
+			return
+		}
+
+		// 🌟 防缓存与类型重写策略（与 StartSendMode 一致）
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+
+		// 🌟 强行设为附件下载，并处理文件名转码（空格替换为 %20）
+		encodedFileName := url.QueryEscape(fi.Name())
+		encodedFileName = strings.ReplaceAll(encodedFileName, "+", "%20")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"; filename*=UTF-8''%s", encodedFileName, encodedFileName))
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", fi.Size()))
+
+		// 🌟 改用 io.Copy 替代 http.ServeContent，防止 docx/pdf 等文件被浏览器解析在线打开
+		_, _ = io.Copy(w, file)
+	})
+
+	a.server = &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: mux,
+	}
+	a.currentMode = "share"
+
+	go func() {
+		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("分享库服务异常终止: %v\n", err)
+		}
+	}()
+
+	localIP, err := a.GetLocalIP()
+	if err != nil {
+		return "", err
+	}
+
+	// 二维码指向根路径地址
+	return fmt.Sprintf("http://%s:%d/", localIP, port), nil
 }

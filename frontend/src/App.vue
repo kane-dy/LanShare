@@ -14,11 +14,20 @@
       >
         📥 接收文件
       </button>
+      <!-- 🌟 新增分享库 Tab -->
+      <button
+          :class="['tab-btn', activeMode === 'share' ? 'active' : '']"
+          @click="switchMode('share')"
+      >
+        🔗 分享库
+      </button>
     </div>
 
     <!-- 动态组件渲染区域 -->
     <SendMode v-if="activeMode === 'send'" @update-status="handleStatusUpdate" />
     <ReceiveMode v-else-if="activeMode === 'receive'" @update-status="handleStatusUpdate" />
+    <!-- 🌟 渲染 ShareHubMode -->
+    <ShareHubMode v-else-if="activeMode === 'share'" @update-status="handleStatusUpdate" />
 
     <!-- 底部状态提示 -->
     <div v-if="statusMsg" class="status-bar" :class="{ error: isError }">
@@ -31,6 +40,7 @@
 import { ref } from 'vue';
 import SendMode from './components/SendMode.vue';
 import ReceiveMode from './components/ReceiveMode.vue';
+import ShareHubMode from './components/ShareHubMode.vue'; // 🌟 引入新组件
 import { StopServer } from '../wailsjs/go/main/App';
 
 const activeMode = ref('send');

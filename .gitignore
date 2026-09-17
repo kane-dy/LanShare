@@ -1,6 +1,10 @@
 build
 frontend/node_modules
 frontend/dist
+frontend/wailsjs/*
+frontend/index.html
+frontend/main.js
+frontend/package*
 .idea
 go.mod
 go.sum

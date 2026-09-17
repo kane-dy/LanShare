@@ -52,6 +52,9 @@ func (a *App) StartReceiveMode(port int) (string, error) {
 			return
 		}
 
+		// 🌟 1. 获取前端发来的“是否同时分享”复选框状态
+		isShare := r.FormValue("is_share") == "true"
+
 		for _, fileHeader := range files {
 			file, err := fileHeader.Open()
 			if err != nil {
@@ -70,6 +73,15 @@ func (a *App) StartReceiveMode(port int) (string, error) {
 
 			file.Close()
 			out.Close()
+
+			// 🌟 2. 若用户勾选了“同时添加到局域网分享库”，将接收到的文件写入分享记录
+			if isShare {
+				_ = a.AddSharedFile(SharedItem{
+					FileName: fileHeader.Filename,
+					FilePath: dstPath,
+					FileSize: fileHeader.Size,
+				})
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)
